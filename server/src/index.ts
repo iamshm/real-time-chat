@@ -1,5 +1,18 @@
-import { server as WebSocketServer } from "websocket";
+import { server as WebSocketServer, connection } from "websocket";
 import http from "http";
+import {
+  IncomingMessage,
+  SupportedIncomingMessage,
+} from "./messages/IncomingMessages";
+import { UserManager } from "./UserManager";
+import { InMemoryStore } from "./store/InMemoryStore";
+import {
+  OutgoingMessage,
+  SupportedOutgoingMessage,
+} from "./messages/OutgoingMessages";
+
+const userManager = new UserManager();
+const store = new InMemoryStore();
 
 const server = http.createServer(function (request, response) {
   console.log(new Date() + " Received request for " + request.url);
@@ -22,31 +35,88 @@ function originIsAllowed(origin) {
   return true;
 }
 
-wsServer.on("request", function (request) {
+wsServer.on("request", (request) => {
   if (!originIsAllowed(request.origin)) {
     request.reject();
-    console.log(
-      new Date() + " Connection from origin " + request.origin + " rejected.",
-    );
     return;
   }
 
-  const connection = request.accept("echo-protocol", request.origin);
-  console.log(new Date() + " Connection accepted.");
-  connection.on("message", function (message) {
+  const connection = request.accept("echo-protocol", request.origin); // creating connection of websocket with the incoming request
+
+  connection.on("message", (message) => {
+    // adding event listener on the created connection
     if (message.type === "utf8") {
-      console.log("Received Message: " + message.utf8Data);
-      connection.sendUTF(message.utf8Data);
+      try {
+        messageHandler(connection, {
+          type: SupportedIncomingMessage.JoinRoom,
+          payload: {
+            name: "",
+            roomId: "",
+            userId: "",
+          },
+        });
+      } catch (error) {}
     } else if (message.type === "binary") {
-      console.log(
-        "Received Binary Message of " + message.binaryData.length + " bytes",
-      );
       connection.sendBytes(message.binaryData);
     }
   });
-  connection.on("close", function (reasonCode, description) {
-    console.log(
-      new Date() + " Peer " + connection.remoteAddress + " disconnected.",
-    );
-  });
+
+  connection.on("close", (reasonCode, description) => {});
 });
+
+const messageHandler = (ws: connection, message: IncomingMessage) => {
+  if (message.type === SupportedIncomingMessage.JoinRoom) {
+    const payload = message.payload;
+    userManager.addUser(payload.name, payload.userId, payload.roomId, ws);
+  }
+
+  if (message.type === SupportedIncomingMessage.SendMessage) {
+    const payload = message.payload;
+    const user = userManager.getUser(payload.roomId, payload.userId);
+
+    if (!user) {
+      console.error("User not found");
+      return;
+    }
+    const chat = store.addChat(
+      payload.roomId,
+      user.name,
+      payload.userId,
+      payload.message,
+    );
+    if (!chat) return;
+
+    const outgoingPayload: OutgoingMessage = {
+      type: SupportedOutgoingMessage.AddChat,
+      payload: {
+        chatId: chat.id,
+        roomId: payload.roomId,
+        message: payload.message,
+        name: user.name,
+        upvotes: 0,
+      },
+    };
+
+    userManager.broadCast(payload.userId, payload.roomId, outgoingPayload);
+  }
+
+  if (message.type === SupportedIncomingMessage.UpvoteMessage) {
+    const payload = message.payload;
+
+    const chat = store.upVote(payload.userId, payload.roomId, payload.chatId);
+    if (!chat) {
+      return;
+    }
+
+    const outgoingPayload: OutgoingMessage = {
+      type: SupportedOutgoingMessage.UpdateChat,
+      payload: {
+        chatId: payload.chatId,
+        roomId: payload.roomId,
+        upvotes: chat.upvotes.length,
+      },
+    };
+
+    userManager.broadCast(payload.userId, payload.roomId, outgoingPayload);
+  }
+};

@@ -4,6 +4,7 @@ export interface Room {
   roomId: string;
   chats: Chat[];
 }
+
 let globalChatId = 0;
 
 export class InMemoryStore implements Store {
@@ -31,24 +32,29 @@ export class InMemoryStore implements Store {
 
   addChat(roomId: string, name: string, userId: string, message: string) {
     const room = this.store.get(roomId);
-    if (!room) return [];
+    if (!room) return null;
 
-    return room.chats.push({
+    const chat = {
       id: (globalChatId++).toString(),
       name,
       userId,
       message,
       upvotes: [],
-    });
+    };
+    room.chats.push(chat);
+
+    return chat;
   }
 
   upVote(userId: string, roomId: string, chatId: string) {
     const room = this.store.get(roomId);
-    if (!room) return [];
+    if (!room) return null;
 
     const chat = room.chats.find((chat) => chat.id === chatId);
-    if (!chat) return;
+    if (!chat) return null;
 
-    return chat.upvotes.push(userId);
+    chat.upvotes.push(userId);
+
+    return chat;
   }
 }
