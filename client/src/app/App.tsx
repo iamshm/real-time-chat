@@ -1,11 +1,16 @@
-import { useContext, useState } from "react";
 import InputBox from "./input-box/input-box";
-import SocketContextProvider, { SocketContext } from "./socket-context";
+import Messages from "./messages/messages";
+import SocketContextProvider from "./socket-context";
+import styles from "./App.module.css";
 
 const App = () => {
   return (
     <SocketContextProvider>
-      <InputBox />
+      <div className={styles.container}>
+        <Messages />
+
+        <InputBox />
+      </div>
     </SocketContextProvider>
   );
 };

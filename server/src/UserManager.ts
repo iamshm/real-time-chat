@@ -46,6 +46,11 @@ export class UserManager {
       name,
       connection,
     });
+
+    connection.on("close", (reasonCode, description) => {
+      this.removeUser(roomId, userId);
+      console.log("closed connection");
+    });
   }
 
   removeUser(userId: string, roomId: string) {
@@ -62,8 +67,6 @@ export class UserManager {
     }
 
     room.users.forEach((user) => {
-      if (user.id === userId) return;
-
       user.connection.sendUTF(JSON.stringify(message));
     });
   }

@@ -56,10 +56,6 @@ wsServer.on("request", (request) => {
       }
     }
   });
-
-  connection.on("close", (reasonCode, description) => {
-    // userManager.removeUser(roomId, userId);
-  });
 });
 
 const messageHandler = (ws: connection, message: IncomingMessage) => {
@@ -98,6 +94,7 @@ const messageHandler = (ws: connection, message: IncomingMessage) => {
         message: payload.message,
         name: user.name,
         upvotes: 0,
+        userId: user.id,
       },
     };
 

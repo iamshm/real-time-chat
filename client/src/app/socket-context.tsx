@@ -1,24 +1,49 @@
-import { createContext, ReactNode, useEffect, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 interface Context {
+  currentUserId: string;
   onSendMessage: (message: string) => void;
+  messages: MessageType[];
 }
 
 export const SocketContext = createContext<Context | null>(null);
 SocketContext.displayName = "SocketContext";
 
+export const useSocketContext = () => {
+  const context = useContext(SocketContext);
+
+  return context;
+};
+
 interface ElementProps {
   children: ReactNode;
 }
+
+interface MessageType {
+  userId: string;
+  chatId: string;
+  roomId: string;
+  message: string;
+  name: string;
+  upvotes: number;
+}
+
 const SocketContextProvider = ({ children }: ElementProps) => {
   const [socketState, setSocketState] = useState<WebSocket>();
-  const [userId, setUserId] = useState<number>();
+  const [messages, setMessages] = useState<MessageType[]>([]);
+  const [userId, setUserId] = useState<string>();
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8080/", ["echo-protocol"]);
     setSocketState(socket);
 
-    const userId = Math.ceil(Math.random() * 1000);
+    const userId = Math.ceil(Math.random() * 1000).toString();
     setUserId(userId);
 
     socket.addEventListener("open", (event) => {
@@ -37,8 +62,12 @@ const SocketContextProvider = ({ children }: ElementProps) => {
     });
 
     socket.addEventListener("message", (event) => {
-      console.log("WebSocket message received:", event);
       // Handle incoming messages
+      const parsedReceivedMessage = JSON.parse(event.data);
+
+      if (!!parsedReceivedMessage?.payload) {
+        setMessages((prev) => [...prev, parsedReceivedMessage.payload]);
+      }
     });
 
     socket.addEventListener("close", (event) => {
@@ -61,7 +90,6 @@ const SocketContextProvider = ({ children }: ElementProps) => {
         userId: userId,
       },
     });
-    console.log(stringifiedPayload);
 
     socketState.send(stringifiedPayload);
   };
@@ -70,6 +98,8 @@ const SocketContextProvider = ({ children }: ElementProps) => {
     <SocketContext.Provider
       value={{
         onSendMessage,
+        messages,
+        currentUserId: userId,
       }}
     >
       {children}

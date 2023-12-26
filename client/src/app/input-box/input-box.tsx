@@ -1,9 +1,11 @@
-import { useContext, useState } from "react";
-import { SocketContext } from "../socket-context";
+import { useState } from "react";
+import { useSocketContext } from "../socket-context";
+import styles from "./styles.module.css";
 
 const InputBox = () => {
   const [message, setMessage] = useState("");
-  const context = useContext(SocketContext);
+  const context = useSocketContext();
+
   if (!context) return <div>Input failure</div>;
 
   const { onSendMessage } = context;
@@ -13,9 +15,14 @@ const InputBox = () => {
   };
 
   return (
-    <div>
-      <input value={message} onChange={(e) => setMessage(e.target.value)} />
-      <button onClick={onSend}>Send Chat</button>
+    <div className={styles.inputContainer}>
+      <input
+        placeholder="Enter a message"
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+      />
+
+      <button onClick={onSend}>Send</button>
     </div>
   );
 };
