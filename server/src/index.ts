@@ -30,8 +30,6 @@ const wsServer = new WebSocketServer({
 });
 
 function originIsAllowed(origin) {
-  console.log(origin);
-
   return true;
 }
 
@@ -41,27 +39,27 @@ wsServer.on("request", (request) => {
     return;
   }
 
+  // const connection = request.accept(request.origin); // creating connection of websocket with the incoming request
   const connection = request.accept("echo-protocol", request.origin); // creating connection of websocket with the incoming request
 
   connection.on("message", (message) => {
-    // adding event listener on the created connection
     if (message.type === "utf8") {
+      const msgJson = JSON.parse(message.utf8Data);
+
       try {
         messageHandler(connection, {
-          type: SupportedIncomingMessage.JoinRoom,
-          payload: {
-            name: "",
-            roomId: "",
-            userId: "",
-          },
+          type: msgJson.type,
+          payload: msgJson.payload,
         });
-      } catch (error) {}
-    } else if (message.type === "binary") {
-      connection.sendBytes(message.binaryData);
+      } catch (error) {
+        console.log(error);
+      }
     }
   });
 
-  connection.on("close", (reasonCode, description) => {});
+  connection.on("close", (reasonCode, description) => {
+    // userManager.removeUser(roomId, userId);
+  });
 });
 
 const messageHandler = (ws: connection, message: IncomingMessage) => {
@@ -72,19 +70,25 @@ const messageHandler = (ws: connection, message: IncomingMessage) => {
 
   if (message.type === SupportedIncomingMessage.SendMessage) {
     const payload = message.payload;
-    const user = userManager.getUser(payload.roomId, payload.userId);
+
+    const user = userManager.getUser(payload.userId, payload.roomId);
 
     if (!user) {
       console.error("User not found");
       return;
     }
+
     const chat = store.addChat(
       payload.roomId,
       user.name,
       payload.userId,
       payload.message,
     );
-    if (!chat) return;
+
+    if (!chat) {
+      console.log("chat storing failed");
+      return;
+    }
 
     const outgoingPayload: OutgoingMessage = {
       type: SupportedOutgoingMessage.AddChat,

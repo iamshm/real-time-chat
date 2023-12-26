@@ -31,8 +31,15 @@ export class InMemoryStore implements Store {
   }
 
   addChat(roomId: string, name: string, userId: string, message: string) {
+    if (!this.store.get(roomId)) {
+      this.initRoom(roomId);
+    }
+
     const room = this.store.get(roomId);
-    if (!room) return null;
+    if (!room) {
+      console.log("room not found");
+      return;
+    }
 
     const chat = {
       id: (globalChatId++).toString(),
@@ -41,6 +48,7 @@ export class InMemoryStore implements Store {
       message,
       upvotes: [],
     };
+
     room.chats.push(chat);
 
     return chat;

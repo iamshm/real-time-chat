@@ -18,6 +18,12 @@ export class UserManager {
     this.rooms = new Map<string, Room>();
   }
 
+  initUser(roomId: string) {
+    this.rooms.set(roomId, {
+      users: [],
+    });
+  }
+
   getUser(userId: string, roomId: string): User | null {
     const user = this.rooms
       .get(roomId)
@@ -32,9 +38,7 @@ export class UserManager {
     connection: connection,
   ) {
     if (!this.rooms.get(roomId)) {
-      this.rooms.set(roomId, {
-        users: [],
-      });
+      this.initUser(roomId);
     }
 
     this.rooms.get(roomId)?.users.push({
@@ -58,6 +62,8 @@ export class UserManager {
     }
 
     room.users.forEach((user) => {
+      if (user.id === userId) return;
+
       user.connection.sendUTF(JSON.stringify(message));
     });
   }
