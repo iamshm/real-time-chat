@@ -58,13 +58,14 @@ const SocketContextProvider = ({ children }: ElementProps) => {
       payload: {
         message,
         roomId: "1",
-        userId: userId.toString(),
+        userId: userId,
       },
     });
     console.log(stringifiedPayload);
 
     socketState.send(stringifiedPayload);
   };
+
   return (
     <SocketContext.Provider
       value={{
